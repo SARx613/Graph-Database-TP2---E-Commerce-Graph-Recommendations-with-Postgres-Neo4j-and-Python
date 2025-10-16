@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:16
+    platform: linux/arm64/v8
+    ports: ["5432:5432"]
+    environment:
+      POSTGRES_DB: shop
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  neo4j:
+    image: neo4j:5.21-community
+    platform: linux/arm64/v8
+    ports: ["7474:7474", "7687:7687"]
+    environment:
+      NEO4J_AUTH: neo4j/password
+      NEO4J_PLUGINS: '["apoc","graph-data-science"]'
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*"
+    volumes:
+      - ./neo4j/data:/data
+      - ./neo4j/import:/import
+    restart: unless-stopped
+
+  app:
+    image: python:3.11-slim
+    platform: linux/arm64/v8
+    working_dir: /work
+    command: ["/work/app/start.sh"]
+    ports: ["8000:8000"]
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./app:/work/app
+    depends_on: [postgres, neo4j]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
